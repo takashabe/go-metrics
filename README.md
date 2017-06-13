@@ -18,3 +18,21 @@ TODO
 ## reference
 
 http://docs.datadoghq.com/guides/metrics/#overview
+
+## Memo
+
+require doing:
+
+* app -> stats.push(value)
+* stats.show()
+
+components:
+
+* collect values
+* backend store values
+* show metrics provider
+  * flush
+    * for console
+    * for server
+  * get
+    * json

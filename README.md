@@ -30,9 +30,13 @@ components:
 
 * collect values
 * backend store values
+  * memory
+  * (optional) graphite
 * show metrics provider
-  * flush
-    * for console
-    * for server
+  * format: json
   * get
-    * json
+    * via import this package
+    * (optional) via network interface
+  * (optional) flush
+    * console
+    * server

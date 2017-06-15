@@ -1,4 +1,4 @@
-# go-stats
+# go-metrics
 
 Collecting metrics. The metrics values can be categorized into several types.
 
@@ -29,14 +29,13 @@ require doing:
 components:
 
 * collect values
-* backend store values
-  * memory
-  * (optional) graphite
-* show metrics provider
+  * via import this package
+  * via HTTP
+* show metrics
   * format: json
   * get
     * via import this package
-    * (optional) via network interface
-  * (optional) flush
+    * via HTTP
+  * flush regularly
     * console
     * server

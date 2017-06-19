@@ -80,6 +80,31 @@ func (m *HistogramMetrics) GetType() MetricType {
 	return Histogram
 }
 
+// SetMetrics is implemented Metrics for Set
+type SetMetrics struct {
+	key   string
+	value *Map
+}
+
+func (m *SetMetrics) Aggregate() map[string]Data {
+	m.value.RLock()
+	defer m.value.Unlock()
+	s := make([]string, len(m.value.v))
+	for k, _ := range m.value.v {
+		s = append(s, k)
+	}
+
+	return map[string]Data{
+		m.key: &StringSlice{
+			s: s,
+		},
+	}
+}
+
+func (m *SetMetrics) GetType() MetricType {
+	return Set
+}
+
 // Data is a metrics value
 type Data interface {
 	String() string
@@ -103,14 +128,32 @@ func (f *Float) Add(delta float64) {
 	f.f += delta
 }
 
+// StringSlice is implemented Data
+type StringSlice struct {
+	s []string
+	sync.RWMutex
+}
+
+func (s *StringSlice) String() string {
+	s.Lock()
+	defer s.Unlock()
+	return fmt.Sprint(s.s)
+}
+
 type FloatSlice struct {
 	v []float64
 	sync.RWMutex
 }
 
 type Map struct {
-	v map[string]string
+	v map[string]struct{}
 	sync.RWMutex
+}
+
+func (m *Map) set(s string) {
+	m.Lock()
+	defer m.Unlock()
+	m.v[s] = struct{}{}
 }
 
 type SimpleCollector struct {
@@ -161,5 +204,26 @@ func (c *SimpleCollector) Histogram(key string, delta float64) {
 	// add histogram, ignore otherwise
 	if v, ok := c.metrics[key].(*HistogramMetrics); ok {
 		v.value.v = append(v.value.v, delta)
+	}
+}
+
+// Set add metrics for Set
+func (c *SimpleCollector) Set(key string, delta string) {
+	c.Lock()
+	defer c.Unlock()
+
+	// add key
+	if _, dup := c.metrics[key]; !dup {
+		c.metrics[key] = &SetMetrics{
+			key: key,
+			value: &Map{
+				v: make(map[string]struct{}),
+			},
+		}
+	}
+
+	// add set, ignore otherwise
+	if v, ok := c.metrics[key].(*SetMetrics); ok {
+		v.value.set(delta)
 	}
 }

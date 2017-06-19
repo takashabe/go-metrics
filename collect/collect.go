@@ -130,7 +130,7 @@ func (c *SimpleCollector) Add(key string, delta float64) {
 	defer c.Unlock()
 
 	// add key
-	if v, dup := c.metrics[key]; !dup {
+	if _, dup := c.metrics[key]; !dup {
 		c.metrics[key] = &CounterMetrics{
 			key:   key,
 			value: &Float{},
@@ -149,7 +149,7 @@ func (c *SimpleCollector) Histogram(key string, delta float64) {
 	defer c.Unlock()
 
 	// add key
-	if v, dup := c.metrics[key]; !dup {
+	if _, dup := c.metrics[key]; !dup {
 		c.metrics[key] = &HistogramMetrics{
 			key: key,
 			value: &FloatSlice{

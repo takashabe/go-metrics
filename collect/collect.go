@@ -87,8 +87,22 @@ func (m *HistogramMetrics) Aggregate() map[string]Data {
 }
 
 func (m *HistogramMetrics) count() Data {
+	m.value.RLock()
+	defer m.value.RUnlock()
 	return &Float{
 		f: float64(len(m.value.v)),
+	}
+}
+
+func (m *HistogramMetrics) average() Data {
+	m.value.RLock()
+	defer m.value.RUnlock()
+	var total float64
+	for _, v := range m.value.v {
+		total += v
+	}
+	return &Float{
+		f: total / float64(len(m.value.v)),
 	}
 }
 

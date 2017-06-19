@@ -3,10 +3,15 @@ package collect
 import "testing"
 
 func TestCounter(t *testing.T) {
-	// expected
 	c := NewSimpleCollector()
 	c.Add("test.a", 1)
 	c.Add("test.b", 2)
+}
+
+func TestGauge(t *testing.T) {
+	c := NewSimpleCollector()
+	c.Gauge("t", 1)
+	c.Gauge("t", 2)
 }
 
 func TestMix(t *testing.T) {

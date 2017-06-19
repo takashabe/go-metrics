@@ -53,6 +53,22 @@ func (m *CounterMetrics) GetType() MetricType {
 	return Counter
 }
 
+// GaugeMetrics is implemented Metrics for Gauge
+type GaugeMetrics struct {
+	key   string
+	value *Float
+}
+
+func (m *GaugeMetrics) Aggregate() map[string]Data {
+	return map[string]Data{
+		m.key: m.value,
+	}
+}
+
+func (m *GaugeMetrics) GetType() MetricType {
+	return Gauge
+}
+
 // HistogramMetrics is implemented Metirics for Histogram
 type HistogramMetrics struct {
 	key   string
@@ -128,6 +144,12 @@ func (f *Float) add(delta float64) {
 	f.f += delta
 }
 
+func (f *Float) set(delta float64) {
+	f.Lock()
+	defer f.Unlock()
+	f.f = delta
+}
+
 // StringSlice is implemented Data
 type StringSlice struct {
 	s []string
@@ -182,8 +204,26 @@ func (c *SimpleCollector) Add(key string, delta float64) {
 
 	// incremental counter, ignore otherwise
 	if v, ok := c.metrics[key].(*CounterMetrics); ok {
-		v.value.Add(delta)
 		v.value.add(delta)
+	}
+}
+
+// Gauge set metrics for GaugeMetrics
+func (c *SimpleCollector) Gauge(key string, delta float64) {
+	c.Lock()
+	defer c.Unlock()
+
+	// add key
+	if _, dup := c.metrics[key]; !dup {
+		c.metrics[key] = &GaugeMetrics{
+			key:   key,
+			value: &Float{},
+		}
+	}
+
+	// incremental counter, ignore otherwise
+	if v, ok := c.metrics[key].(*GaugeMetrics); ok {
+		v.value.set(delta)
 	}
 }
 

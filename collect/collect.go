@@ -118,6 +118,12 @@ type SimpleCollector struct {
 	sync.RWMutex
 }
 
+func NewSimpleCollector() *SimpleCollector {
+	return &SimpleCollector{
+		metrics: make(map[string]Metrics),
+	}
+}
+
 // Add add count for CounterMetrics
 func (c *SimpleCollector) Add(key string, delta float64) {
 	c.Lock()

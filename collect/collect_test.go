@@ -9,7 +9,7 @@ func TestCounter(t *testing.T) {
 	c.Add("test.b", 2)
 }
 
-func _TestMix(t *testing.T) {
+func TestMix(t *testing.T) {
 	c := NewSimpleCollector()
 	c.Add("test.c", 2)
 	c.Histogram("test.h", 10.5)

@@ -122,7 +122,7 @@ func (f *Float) String() string {
 	return fmt.Sprint(f.f)
 }
 
-func (f *Float) Add(delta float64) {
+func (f *Float) add(delta float64) {
 	f.Lock()
 	defer f.Unlock()
 	f.f += delta
@@ -183,6 +183,7 @@ func (c *SimpleCollector) Add(key string, delta float64) {
 	// incremental counter, ignore otherwise
 	if v, ok := c.metrics[key].(*CounterMetrics); ok {
 		v.value.Add(delta)
+		v.value.add(delta)
 	}
 }
 

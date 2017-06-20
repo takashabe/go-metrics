@@ -2,6 +2,7 @@ package collect
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 )
 
@@ -75,14 +76,20 @@ type HistogramMetrics struct {
 	value *FloatSlice
 }
 
+// minPercentileSize is minimum number of size for percentile analysis
+const minPercentileSize = 10
+
 func (m *HistogramMetrics) Aggregate() map[string]Data {
-	// TODO
+	m.value.Lock()
+	sort.Float64s(m.value.v)
+	m.value.Unlock()
+
 	return map[string]Data{
 		m.key + ".count":        m.count(),
-		m.key + ".avg":          m.count(),
-		m.key + ".max":          m.count(),
-		m.key + ".median":       m.count(),
-		m.key + ".95percentile": m.count(),
+		m.key + ".avg":          m.average(),
+		m.key + ".max":          m.max(),
+		m.key + ".median":       m.median(),
+		m.key + ".95percentile": m.percentile(0.95),
 	}
 }
 
@@ -103,6 +110,44 @@ func (m *HistogramMetrics) average() Data {
 	}
 	return &Float{
 		f: total / float64(len(m.value.v)),
+	}
+}
+
+// note: expect sorted list
+func (m *HistogramMetrics) max() Data {
+	m.value.RLock()
+	defer m.value.RUnlock()
+	var max float64
+	if size := len(m.value.v); size > 0 {
+		max = m.value.v[size-1]
+	}
+	return &Float{
+		f: max,
+	}
+}
+
+// note: expect sorted list
+func (m *HistogramMetrics) median() Data {
+	m.value.RLock()
+	defer m.value.RUnlock()
+	var median float64
+	if size := len(m.value.v); size > 0 {
+		median = m.value.v[size/2]
+	}
+	return &Float{
+		f: median,
+	}
+}
+
+// note: expect sorted list
+func (m *HistogramMetrics) percentile(n float64) Data {
+	m.value.RLock()
+	defer m.value.RUnlock()
+	if n < 1.0 || len(m.value.v) < minPercentileSize {
+		return &Float{}
+	}
+	return &Float{
+		f: m.value.v[int(float64(len(m.value.v))*n)],
 	}
 }
 

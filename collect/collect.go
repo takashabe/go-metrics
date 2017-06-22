@@ -2,6 +2,7 @@ package collect
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 )
@@ -77,7 +78,7 @@ type HistogramMetrics struct {
 }
 
 // minPercentileSize is minimum number of size for percentile analysis
-const minPercentileSize = 10
+const minPercentileSize = 2
 
 func (m *HistogramMetrics) Aggregate() map[string]Data {
 	m.value.Lock()
@@ -143,11 +144,21 @@ func (m *HistogramMetrics) median() Data {
 func (m *HistogramMetrics) percentile(n float64) Data {
 	m.value.RLock()
 	defer m.value.RUnlock()
-	if n < 1.0 || len(m.value.v) < minPercentileSize {
+	list := m.value.v
+	if 1.0 <= n || len(list) < minPercentileSize {
 		return &Float{}
 	}
+
+	// use linear interpolation
+	// see type R-7: https://en.wikipedia.org/wiki/Quantile
+	r := 1 + float64((len(list)-1))*n
+	rFloor := int(math.Floor(r))
+	rCeil := int(math.Ceil(r))
+	// -1 means in accordance with slice index
+	q := list[rFloor-1] + (r-float64(rFloor))*(list[rCeil-1]-list[rFloor-1])
+
 	return &Float{
-		f: m.value.v[int(float64(len(m.value.v))*n)],
+		f: q,
 	}
 }
 

@@ -12,9 +12,9 @@ func TestCounter(t *testing.T) {
 		value  float64
 		expect string
 	}{
-		{"a", 1, "1"},
-		{"a", 2, "3"},
-		{"b", 2, "2"},
+		{"a", 1, "1.0"},
+		{"a", 2, "3.0"},
+		{"b", 2, "2.0"},
 	}
 	for i, c := range cases {
 		sc.Add(c.key, c.value)
@@ -32,9 +32,9 @@ func TestGauge(t *testing.T) {
 		value  float64
 		expect string
 	}{
-		{"a", 1, "1"},
-		{"a", 2, "2"},
-		{"b", 1, "1"},
+		{"a", 1, "1.0"},
+		{"a", 2, "2.0"},
+		{"b", 1, "1.0"},
 	}
 	for i, c := range cases {
 		sc.Gauge(c.key, c.value)
@@ -50,32 +50,45 @@ func TestHistogram(t *testing.T) {
 	cases := []struct {
 		key    string
 		values []float64
-		expect map[string]float64
+		expect map[string]string
 	}{
 		{
 			"a",
 			[]float64{
-				5, 5, 3, 3, 10,
+				5,
 			},
-			map[string]float64{
-				"a.count":        5,
-				"a.avg":          5.2,
-				"a.max":          10,
-				"a.median":       5,
-				"a.95percentile": 0,
+			map[string]string{
+				"a.count":        "1.0",
+				"a.avg":          "5.0",
+				"a.max":          "5.0",
+				"a.median":       "5.0",
+				"a.95percentile": "0.0",
 			},
 		},
 		{
 			"b",
 			[]float64{
+				1, 2,
+			},
+			map[string]string{
+				"b.count":        "2.0",
+				"b.avg":          "1.5",
+				"b.max":          "2.0",
+				"b.median":       "2.0",
+				"b.95percentile": "1.9",
+			},
+		},
+		{
+			"c",
+			[]float64{
 				10, 5, 5, 2, 3, 40, 10, 10, 10, 9,
 			},
-			map[string]float64{
-				"b.count":        10,
-				"b.avg":          10.4,
-				"b.max":          40,
-				"b.median":       10,
-				"b.95percentile": 40,
+			map[string]string{
+				"c.count":        "10.0",
+				"c.avg":          "10.4",
+				"c.max":          "40.0",
+				"c.median":       "10.0",
+				"c.95percentile": "26.5",
 			},
 		},
 	}

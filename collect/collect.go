@@ -205,7 +205,7 @@ type Float struct {
 func (f *Float) String() string {
 	f.RLock()
 	defer f.RUnlock()
-	return fmt.Sprint(f.f)
+	return fmt.Sprintf("%.1f", f.f)
 }
 
 func (f *Float) add(delta float64) {

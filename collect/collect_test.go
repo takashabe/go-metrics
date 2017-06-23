@@ -1,9 +1,6 @@
 package collect
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 func TestCounter(t *testing.T) {
 	sc := NewSimpleCollector()
@@ -102,8 +99,8 @@ func TestHistogram(t *testing.T) {
 		}
 		for ek, ev := range c.expect {
 			av := actual[ek].String()
-			if av != fmt.Sprint(ev) {
-				t.Errorf("#%d-%s: want %s, got %s", i, ek, fmt.Sprint(ev), av)
+			if av != ev {
+				t.Errorf("#%d-%s: want %s, got %s", i, ek, ev, av)
 			}
 		}
 	}

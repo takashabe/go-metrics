@@ -174,11 +174,12 @@ type SetMetrics struct {
 
 func (m *SetMetrics) Aggregate() map[string]Data {
 	m.value.RLock()
-	defer m.value.Unlock()
-	s := make([]string, len(m.value.v))
+	defer m.value.RUnlock()
+	s := make([]string, 0)
 	for k, _ := range m.value.v {
 		s = append(s, k)
 	}
+	sort.Strings(s)
 
 	return map[string]Data{
 		m.key: &StringSlice{

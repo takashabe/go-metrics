@@ -167,7 +167,7 @@ func TestMix(t *testing.T) {
 
 	// expect: can't overwrite at exist keys
 	c.Gauge("c", 1)
-	if got := c.metrics["c"].GetType(); got != Counter {
-		t.Errorf("want %s, got %s", Counter, got)
+	if got := c.metrics["c"].GetType(); got != TypeCounter {
+		t.Errorf("want %s, got %s", TypeCounter, got)
 	}
 }

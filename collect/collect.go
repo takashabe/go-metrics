@@ -12,21 +12,21 @@ type MetricType int
 
 const (
 	_ MetricType = iota
-	Counter
-	Gauge
-	Histogram
-	Set
+	TypeCounter
+	TypeGauge
+	TypeHistogram
+	TypeSet
 )
 
 func (m MetricType) String() string {
 	switch m {
-	case Counter:
+	case TypeCounter:
 		return "counter"
-	case Gauge:
+	case TypeGauge:
 		return "gauge"
-	case Histogram:
+	case TypeHistogram:
 		return "histogram"
-	case Set:
+	case TypeSet:
 		return "set"
 	default:
 		return "not supported metric type"
@@ -52,7 +52,7 @@ func (m *CounterMetrics) Aggregate() map[string]Data {
 }
 
 func (m *CounterMetrics) GetType() MetricType {
-	return Counter
+	return TypeCounter
 }
 
 // GaugeMetrics is implemented Metrics for Gauge
@@ -68,7 +68,7 @@ func (m *GaugeMetrics) Aggregate() map[string]Data {
 }
 
 func (m *GaugeMetrics) GetType() MetricType {
-	return Gauge
+	return TypeGauge
 }
 
 // HistogramMetrics is implemented Metirics for Histogram
@@ -163,7 +163,7 @@ func (m *HistogramMetrics) percentile(n float64) Data {
 }
 
 func (m *HistogramMetrics) GetType() MetricType {
-	return Histogram
+	return TypeHistogram
 }
 
 // SetMetrics is implemented Metrics for Set
@@ -189,7 +189,7 @@ func (m *SetMetrics) Aggregate() map[string]Data {
 }
 
 func (m *SetMetrics) GetType() MetricType {
-	return Set
+	return TypeSet
 }
 
 // Data is a metrics value

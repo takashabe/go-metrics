@@ -148,9 +148,26 @@ func TestSet(t *testing.T) {
 
 func TestMix(t *testing.T) {
 	c := NewSimpleCollector()
-	c.Add("test.c", 2)
-	c.Histogram("test.h", 10.5)
-	c.Histogram("test.h", 10)
-	c.Set("test.s", "a")
-	c.Set("test.s", "b")
+	c.Add("c", 2)
+	c.Gauge("g", 5)
+	c.Histogram("h", 10.5)
+	c.Histogram("h", 10)
+	c.Set("s", "a")
+	c.Set("s", "b")
+
+	// expect: choosable a metrics in mixed metrics collector
+	expectGauge := "5.0"
+	if got := c.metrics["g"].Aggregate(); got["g"].String() != expectGauge {
+		t.Errorf("want %v, got %v", expectGauge, got["g"].String())
+	}
+	expectSet := fmt.Sprint([]string{"a", "b"})
+	if got := c.metrics["s"].Aggregate(); got["s"].String() != expectSet {
+		t.Errorf("want %v, got %v", expectSet, got["s"].String())
+	}
+
+	// expect: can't overwrite at exist keys
+	c.Gauge("c", 1)
+	if got := c.metrics["c"].GetType(); got != Counter {
+		t.Errorf("want %s, got %s", Counter, got)
+	}
 }

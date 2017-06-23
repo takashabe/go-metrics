@@ -21,8 +21,8 @@ func TestCounter(t *testing.T) {
 		if got := sc.metrics[c.key].GetType(); got != TypeCounter {
 			t.Fatalf("#%d: want type %s, got %s", i, TypeCounter, got)
 		}
-		actual := sc.metrics[c.key].Aggregate()
-		if got := actual[c.key].String(); got != c.expect {
+		agg := sc.metrics[c.key].Aggregate()
+		if got := agg[c.key].String(); got != c.expect {
 			t.Errorf("#%d: want value %s, got %s", i, c.expect, got)
 		}
 	}
@@ -44,8 +44,8 @@ func TestGauge(t *testing.T) {
 		if got := sc.metrics[c.key].GetType(); got != TypeGauge {
 			t.Fatalf("#%d: want type %s, got %s", i, TypeGauge, got)
 		}
-		actual := sc.metrics[c.key].Aggregate()
-		if got := actual[c.key].String(); got != c.expect {
+		agg := sc.metrics[c.key].Aggregate()
+		if got := agg[c.key].String(); got != c.expect {
 			t.Errorf("#%d: want value %s, got %s", i, c.expect, got)
 		}
 	}
@@ -105,12 +105,12 @@ func TestHistogram(t *testing.T) {
 		if got := sc.metrics[c.key].GetType(); got != TypeHistogram {
 			t.Fatalf("#%d: want type %s, got %s", i, TypeHistogram, got)
 		}
-		actual := sc.metrics[c.key].Aggregate()
-		if len(actual) != len(c.expect) {
-			t.Fatalf("#%d: want size %d, got %d", i, len(c.expect), len(actual))
+		agg := sc.metrics[c.key].Aggregate()
+		if len(agg) != len(c.expect) {
+			t.Fatalf("#%d: want size %d, got %d", i, len(c.expect), len(agg))
 		}
 		for ek, ev := range c.expect {
-			av := actual[ek].String()
+			av := agg[ek].String()
 			if av != ev {
 				t.Errorf("#%d-%s: want %s, got %s", i, ek, ev, av)
 			}
@@ -151,9 +151,9 @@ func TestSet(t *testing.T) {
 		if got := sc.metrics[c.key].GetType(); got != TypeSet {
 			t.Fatalf("#%d: want type %s, got %s", i, TypeSet, got)
 		}
-		actual := sc.metrics[c.key].Aggregate()
-		if actual[c.key].String() != fmt.Sprint(c.expect) {
-			t.Errorf("#%d: want %s, got %s", i, c.expect, actual[c.key].String())
+		agg := sc.metrics[c.key].Aggregate()
+		if agg[c.key].String() != fmt.Sprint(c.expect) {
+			t.Errorf("#%d: want %s, got %s", i, c.expect, agg[c.key].String())
 		}
 	}
 }

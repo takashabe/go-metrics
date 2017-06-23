@@ -249,6 +249,15 @@ func (m *Map) set(s string) {
 	m.v[s] = struct{}{}
 }
 
+// Collector is collect metrics interface
+type Collector interface {
+	Add(string, float64)
+	Gauge(string, float64)
+	Histogram(string, float64)
+	Set(string, string)
+}
+
+// SimpleCollector is implemented Collector
 type SimpleCollector struct {
 	metrics map[string]Metrics
 	sync.RWMutex

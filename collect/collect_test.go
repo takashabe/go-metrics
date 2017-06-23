@@ -1,6 +1,9 @@
 package collect
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestCounter(t *testing.T) {
 	sc := NewSimpleCollector()
@@ -102,6 +105,43 @@ func TestHistogram(t *testing.T) {
 			if av != ev {
 				t.Errorf("#%d-%s: want %s, got %s", i, ek, ev, av)
 			}
+		}
+	}
+}
+
+func TestSet(t *testing.T) {
+	sc := NewSimpleCollector()
+	cases := []struct {
+		key    string
+		values []string
+		expect []string
+	}{
+		{
+			"a",
+			[]string{
+				"1", "1", "2",
+			},
+			[]string{
+				"1", "2",
+			},
+		},
+		{
+			"b",
+			[]string{
+				"1",
+			},
+			[]string{
+				"1",
+			},
+		},
+	}
+	for i, c := range cases {
+		for _, v := range c.values {
+			sc.Set(c.key, v)
+		}
+		actual := sc.metrics[c.key].Aggregate()
+		if actual[c.key].String() != fmt.Sprint(c.expect) {
+			t.Errorf("#%d: want %s, got %s", i, c.expect, actual[c.key].String())
 		}
 	}
 }

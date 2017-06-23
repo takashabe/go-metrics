@@ -18,6 +18,9 @@ func TestCounter(t *testing.T) {
 	}
 	for i, c := range cases {
 		sc.Add(c.key, c.value)
+		if got := sc.metrics[c.key].GetType(); got != TypeCounter {
+			t.Fatalf("#%d: want type %s, got %s", i, TypeCounter, got)
+		}
 		actual := sc.metrics[c.key].Aggregate()
 		if got := actual[c.key].String(); got != c.expect {
 			t.Errorf("#%d: want value %s, got %s", i, c.expect, got)
@@ -38,6 +41,9 @@ func TestGauge(t *testing.T) {
 	}
 	for i, c := range cases {
 		sc.Gauge(c.key, c.value)
+		if got := sc.metrics[c.key].GetType(); got != TypeGauge {
+			t.Fatalf("#%d: want type %s, got %s", i, TypeGauge, got)
+		}
 		actual := sc.metrics[c.key].Aggregate()
 		if got := actual[c.key].String(); got != c.expect {
 			t.Errorf("#%d: want value %s, got %s", i, c.expect, got)
@@ -96,6 +102,9 @@ func TestHistogram(t *testing.T) {
 		for _, v := range c.values {
 			sc.Histogram(c.key, v)
 		}
+		if got := sc.metrics[c.key].GetType(); got != TypeHistogram {
+			t.Fatalf("#%d: want type %s, got %s", i, TypeHistogram, got)
+		}
 		actual := sc.metrics[c.key].Aggregate()
 		if len(actual) != len(c.expect) {
 			t.Fatalf("#%d: want size %d, got %d", i, len(c.expect), len(actual))
@@ -138,6 +147,9 @@ func TestSet(t *testing.T) {
 	for i, c := range cases {
 		for _, v := range c.values {
 			sc.Set(c.key, v)
+		}
+		if got := sc.metrics[c.key].GetType(); got != TypeSet {
+			t.Fatalf("#%d: want type %s, got %s", i, TypeSet, got)
 		}
 		actual := sc.metrics[c.key].Aggregate()
 		if actual[c.key].String() != fmt.Sprint(c.expect) {

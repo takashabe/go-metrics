@@ -13,4 +13,5 @@ type MetricsWriter interface {
 	AddMetrics(metrics ...string) error
 	RemoveMetrics(metrics ...string) error
 	Flush() ([]byte, error)
+	Flush() error
 }

@@ -251,6 +251,11 @@ func (m *Map) set(s string) {
 
 // Collector is collect metrics interface
 type Collector interface {
+	// metrics accessor
+	GetMetrics(string) (Metrics, error)
+	GetMetricsKeys() []string
+
+	// collect metrics functions
 	Add(string, float64)
 	Gauge(string, float64)
 	Histogram(string, float64)

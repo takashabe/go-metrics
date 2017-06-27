@@ -46,6 +46,8 @@ type CounterMetrics struct {
 }
 
 func (m *CounterMetrics) Aggregate() map[string]Data {
+	m.value.RLock()
+	defer m.value.RUnlock()
 	return map[string]Data{
 		m.key: m.value,
 	}

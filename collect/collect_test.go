@@ -205,3 +205,29 @@ func TestMix(t *testing.T) {
 		t.Errorf("want %s, got %s", TypeCounter, got)
 	}
 }
+
+func TestGetMetrics(t *testing.T) {
+	c := NewSimpleCollector()
+	c.Add("c", 1)
+	c.Histogram("h", 1)
+	c.Set("s", "a")
+	c.Set("s", "b")
+
+	eCounter := []byte(`{"c":1.0}`)
+	mCounter, err := c.GetMetrics("c")
+	if err != nil {
+		t.Fatalf("want no error, got %v", err)
+	}
+	if !reflect.DeepEqual(mCounter, eCounter) {
+		t.Errorf("want %s, got %s", eCounter, mCounter)
+	}
+
+	eSet := []byte(`{"s":["a","b"]}`)
+	mSet, err := c.GetMetrics("s")
+	if err != nil {
+		t.Fatalf("want no error, got %v", err)
+	}
+	if !reflect.DeepEqual(mSet, eSet) {
+		t.Errorf("want %s, got %s", eSet, mSet)
+	}
+}

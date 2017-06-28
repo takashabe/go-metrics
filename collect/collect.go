@@ -7,6 +7,13 @@ import (
 	"math"
 	"sort"
 	"sync"
+
+	"github.com/pkg/errors"
+)
+
+// about metrics errors
+var (
+	ErrNotFoundMetrics = errors.New("not found metrics")
 )
 
 // MetricType is metric types
@@ -285,6 +292,17 @@ func NewSimpleCollector() *SimpleCollector {
 	return &SimpleCollector{
 		metrics: make(map[string]Metrics),
 	}
+}
+
+func (c *SimpleCollector) GetMetrics(key string) ([]byte, error) {
+	c.RLock()
+	defer c.RUnlock()
+
+	m, ok := c.metrics[key]
+	if !ok {
+		return nil, ErrNotFoundMetrics
+	}
+	return json.Marshal(m.Aggregate())
 }
 
 // Add add count for CounterMetrics

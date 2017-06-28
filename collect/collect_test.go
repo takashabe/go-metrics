@@ -1,7 +1,7 @@
 package collect
 
 import (
-	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -10,11 +10,11 @@ func TestCounter(t *testing.T) {
 	cases := []struct {
 		key    string
 		value  float64
-		expect string
+		expect []byte
 	}{
-		{"a", 1, "1.0"},
-		{"a", 2, "3.0"},
-		{"b", 2, "2.0"},
+		{"a", 1, []byte("1.0")},
+		{"a", 2, []byte("3.0")},
+		{"b", 2, []byte("2.0")},
 	}
 	for i, c := range cases {
 		sc.Add(c.key, c.value)
@@ -22,7 +22,11 @@ func TestCounter(t *testing.T) {
 			t.Fatalf("#%d: want type %s, got %s", i, TypeCounter, got)
 		}
 		agg := sc.metrics[c.key].Aggregate()
-		if got := agg[c.key].String(); got != c.expect {
+		got, err := agg[c.key].MarshalJSON()
+		if err != nil {
+			t.Fatalf("#%d: want no error, got %v", i, err)
+		}
+		if !reflect.DeepEqual(got, c.expect) {
 			t.Errorf("#%d: want value %s, got %s", i, c.expect, got)
 		}
 	}
@@ -33,11 +37,11 @@ func TestGauge(t *testing.T) {
 	cases := []struct {
 		key    string
 		value  float64
-		expect string
+		expect []byte
 	}{
-		{"a", 1, "1.0"},
-		{"a", 2, "2.0"},
-		{"b", 1, "1.0"},
+		{"a", 1, []byte("1.0")},
+		{"a", 2, []byte("2.0")},
+		{"b", 1, []byte("1.0")},
 	}
 	for i, c := range cases {
 		sc.Gauge(c.key, c.value)
@@ -45,7 +49,11 @@ func TestGauge(t *testing.T) {
 			t.Fatalf("#%d: want type %s, got %s", i, TypeGauge, got)
 		}
 		agg := sc.metrics[c.key].Aggregate()
-		if got := agg[c.key].String(); got != c.expect {
+		got, err := agg[c.key].MarshalJSON()
+		if err != nil {
+			t.Fatalf("#%d: want no error, got %v", i, err)
+		}
+		if !reflect.DeepEqual(got, c.expect) {
 			t.Errorf("#%d: want value %s, got %s", i, c.expect, got)
 		}
 	}
@@ -56,19 +64,19 @@ func TestHistogram(t *testing.T) {
 	cases := []struct {
 		key    string
 		values []float64
-		expect map[string]string
+		expect map[string][]byte
 	}{
 		{
 			"a",
 			[]float64{
 				5,
 			},
-			map[string]string{
-				"a.count":        "1.0",
-				"a.avg":          "5.0",
-				"a.max":          "5.0",
-				"a.median":       "5.0",
-				"a.95percentile": "0.0",
+			map[string][]byte{
+				"a.count":        []byte("1.0"),
+				"a.avg":          []byte("5.0"),
+				"a.max":          []byte("5.0"),
+				"a.median":       []byte("5.0"),
+				"a.95percentile": []byte("0.0"),
 			},
 		},
 		{
@@ -76,12 +84,12 @@ func TestHistogram(t *testing.T) {
 			[]float64{
 				1, 2,
 			},
-			map[string]string{
-				"b.count":        "2.0",
-				"b.avg":          "1.5",
-				"b.max":          "2.0",
-				"b.median":       "2.0",
-				"b.95percentile": "1.9",
+			map[string][]byte{
+				"b.count":        []byte("2.0"),
+				"b.avg":          []byte("1.5"),
+				"b.max":          []byte("2.0"),
+				"b.median":       []byte("2.0"),
+				"b.95percentile": []byte("1.9"),
 			},
 		},
 		{
@@ -89,12 +97,12 @@ func TestHistogram(t *testing.T) {
 			[]float64{
 				10, 5, 5, 2, 3, 40, 10, 10, 10, 9,
 			},
-			map[string]string{
-				"c.count":        "10.0",
-				"c.avg":          "10.4",
-				"c.max":          "40.0",
-				"c.median":       "10.0",
-				"c.95percentile": "26.5",
+			map[string][]byte{
+				"c.count":        []byte("10.0"),
+				"c.avg":          []byte("10.4"),
+				"c.max":          []byte("40.0"),
+				"c.median":       []byte("10.0"),
+				"c.95percentile": []byte("26.5"),
 			},
 		},
 	}
@@ -110,8 +118,11 @@ func TestHistogram(t *testing.T) {
 			t.Fatalf("#%d: want size %d, got %d", i, len(c.expect), len(agg))
 		}
 		for ek, ev := range c.expect {
-			av := agg[ek].String()
-			if av != ev {
+			av, err := agg[ek].MarshalJSON()
+			if err != nil {
+				t.Fatalf("#%d-%s: want no error, got %v", i, ek, err)
+			}
+			if !reflect.DeepEqual(av, ev) {
 				t.Errorf("#%d-%s: want %s, got %s", i, ek, ev, av)
 			}
 		}
@@ -123,25 +134,21 @@ func TestSet(t *testing.T) {
 	cases := []struct {
 		key    string
 		values []string
-		expect []string
+		expect []byte
 	}{
 		{
 			"a",
 			[]string{
 				"1", "1", "2",
 			},
-			[]string{
-				"1", "2",
-			},
+			[]byte(`["1","2"]`),
 		},
 		{
 			"b",
 			[]string{
 				"1",
 			},
-			[]string{
-				"1",
-			},
+			[]byte(`["1"]`),
 		},
 	}
 	for i, c := range cases {
@@ -152,8 +159,12 @@ func TestSet(t *testing.T) {
 			t.Fatalf("#%d: want type %s, got %s", i, TypeSet, got)
 		}
 		agg := sc.metrics[c.key].Aggregate()
-		if agg[c.key].String() != fmt.Sprint(c.expect) {
-			t.Errorf("#%d: want %s, got %s", i, c.expect, agg[c.key].String())
+		got, err := agg[c.key].MarshalJSON()
+		if err != nil {
+			t.Fatalf("#%d: want no error, got %v", i, err)
+		}
+		if !reflect.DeepEqual(got, c.expect) {
+			t.Errorf("#%d: want value %s, got %s", i, c.expect, got)
 		}
 	}
 }
@@ -168,13 +179,24 @@ func TestMix(t *testing.T) {
 	c.Set("s", "b")
 
 	// expect: choosable a metrics in mixed metrics collector
-	expectGauge := "5.0"
-	if got := c.metrics["g"].Aggregate(); got["g"].String() != expectGauge {
-		t.Errorf("want %v, got %v", expectGauge, got["g"].String())
+	expectGauge := []byte("5.0")
+	agg := c.metrics["g"].Aggregate()
+	got, err := agg["g"].MarshalJSON()
+	if err != nil {
+		t.Fatalf("want no error, got %v", err)
 	}
-	expectSet := fmt.Sprint([]string{"a", "b"})
-	if got := c.metrics["s"].Aggregate(); got["s"].String() != expectSet {
-		t.Errorf("want %v, got %v", expectSet, got["s"].String())
+	if !reflect.DeepEqual(got, expectGauge) {
+		t.Errorf("want %s, got %s", expectGauge, got)
+	}
+
+	expectSet := []byte(`["a","b"]`)
+	agg = c.metrics["s"].Aggregate()
+	got, err = agg["s"].MarshalJSON()
+	if err != nil {
+		t.Fatalf("want no error, got %v", err)
+	}
+	if !reflect.DeepEqual(got, expectSet) {
+		t.Errorf("want %s, got %s", expectSet, got)
 	}
 
 	// expect: can't overwrite at exist keys

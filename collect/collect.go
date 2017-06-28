@@ -1,6 +1,8 @@
 package collect
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
@@ -196,7 +198,7 @@ func (m *SetMetrics) GetType() MetricType {
 
 // Data is a metrics value
 type Data interface {
-	String() string
+	MarshalJSON() ([]byte, error)
 }
 
 // Float is implemented Data
@@ -205,10 +207,10 @@ type Float struct {
 	sync.RWMutex
 }
 
-func (f *Float) String() string {
+func (f *Float) MarshalJSON() ([]byte, error) {
 	f.RLock()
 	defer f.RUnlock()
-	return fmt.Sprintf("%.1f", f.f)
+	return []byte(fmt.Sprintf("%.1f", f.f)), nil
 }
 
 func (f *Float) add(delta float64) {
@@ -229,10 +231,19 @@ type StringSlice struct {
 	sync.RWMutex
 }
 
-func (s *StringSlice) String() string {
-	s.Lock()
-	defer s.Unlock()
-	return fmt.Sprint(s.s)
+func (s *StringSlice) MarshalJSON() ([]byte, error) {
+	s.RLock()
+	defer s.RUnlock()
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "[")
+	for k, v := range s.s {
+		if k != 0 {
+			fmt.Fprintf(&buf, ",")
+		}
+		fmt.Fprintf(&buf, "%q", v)
+	}
+	fmt.Fprintf(&buf, "]")
+	return buf.Bytes(), nil
 }
 
 type FloatSlice struct {

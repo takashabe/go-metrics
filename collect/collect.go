@@ -305,6 +305,17 @@ func (c *SimpleCollector) GetMetrics(key string) ([]byte, error) {
 	return json.Marshal(m.Aggregate())
 }
 
+func (c *SimpleCollector) GetMetricsKeys() []string {
+	c.RLock()
+	defer c.RUnlock()
+	res := make([]string, 0)
+	for k, _ := range c.metrics {
+		res = append(res, k)
+	}
+	sort.Strings(res)
+	return res
+}
+
 // Add add count for CounterMetrics
 func (c *SimpleCollector) Add(key string, delta float64) {
 	c.Lock()

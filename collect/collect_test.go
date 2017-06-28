@@ -231,3 +231,18 @@ func TestGetMetrics(t *testing.T) {
 		t.Errorf("want %s, got %s", eSet, mSet)
 	}
 }
+
+func TestGetMetricsKeys(t *testing.T) {
+	c := NewSimpleCollector()
+	c.Add("c", 1)
+	c.Histogram("h", 1)
+	c.Set("s", "a")
+	c.Set("s", "b")
+	c.Gauge("a", 1)
+
+	expect := []string{"a", "c", "h", "s"}
+	got := c.GetMetricsKeys()
+	if !reflect.DeepEqual(got, expect) {
+		t.Errorf("want %v, got %v", expect, got)
+	}
+}

@@ -2,7 +2,6 @@ package forward
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"sort"
@@ -87,16 +86,24 @@ func (cw *ConsoleWriter) RemoveMetrics(metrics ...string) error {
 }
 
 func (cw *ConsoleWriter) Flush() error {
+	keys := cw.MetricsKeys
+	max := len(keys)
 	var buf bytes.Buffer
-	fmt.Fprint(&buf, "{")
-	for _, key := range cw.MetricsKeys {
-		b, err := cw.Source.GetMetrics(key)
+	buf.WriteByte('{')
+	for k, v := range keys {
+		b, err := cw.Source.GetMetrics(v)
 		if err != nil {
 			return err
 		}
-		fmt.Fprint(&buf, b)
+		// trim "{}" and merge all metrics
+		b = bytes.TrimLeft(b, "{")
+		b = bytes.TrimRight(b, "}")
+		buf.Write(b)
+		if k != max-1 {
+			buf.WriteByte(',')
+		}
 	}
-	fmt.Fprint(&buf, "}")
+	buf.WriteByte('}')
 	_, err := cw.Destination.Write(buf.Bytes())
 	return err
 }

@@ -7,13 +7,24 @@ import (
 	"github.com/takashabe/go-metrics/collect"
 )
 
-func TestAddMetrics(t *testing.T) {
+func createDummyConsoleWriterWithKeys(t *testing.T, keys ...string) *ConsoleWriter {
 	sc := collect.NewSimpleCollector()
-	sc.Add("a", 1)
-	sc.Add("b", 1)
-	sc.Add("c", 1)
-	cw := NewConsoleWriter()
-	cw.SetSource(sc)
+	for _, key := range keys {
+		sc.Add(key, 1)
+	}
+	w, err := NewConsoleWriter(sc)
+	if err != nil {
+		t.Fatalf("want no error, got %v", err)
+	}
+	cw, ok := w.(*ConsoleWriter)
+	if !ok {
+		t.Fatalf("want type *ConsoleWriter, got %v", reflect.TypeOf(w))
+	}
+	return cw
+}
+
+func TestAddMetrics(t *testing.T) {
+	cw := createDummyConsoleWriterWithKeys(t, []string{"a", "b", "c"}...)
 
 	cases := []struct {
 		keys       []string
@@ -48,17 +59,8 @@ func TestAddMetrics(t *testing.T) {
 }
 
 func TestRemoveMetrics(t *testing.T) {
-	keys := []string{"a", "b", "c"}
-	sc := collect.NewSimpleCollector()
-	for _, v := range keys {
-		sc.Add(v, 1)
-	}
-	cw := NewConsoleWriter()
-	cw.SetSource(sc)
-	err := cw.AddMetrics(keys...)
-	if err != nil {
-		t.Fatalf("want no error, got %v", err)
-	}
+	cw := createDummyConsoleWriterWithKeys(t, []string{"a", "b", "c"}...)
+	cw.AddMetrics(cw.Source.GetMetricsKeys()...)
 
 	cases := []struct {
 		keys       []string

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"time"
 
@@ -12,12 +13,13 @@ import (
 )
 
 var (
-	ErrNotExistMetrics = errors.New("not exist metrics key")
+	ErrInvalidCollector = errors.New("invalid collector source")
+	ErrNotExistMetrics  = errors.New("not exist metrics key")
 )
 
 // MetricsWriter is write metrics interface
 type MetricsWriter interface {
-	SetSource(c *collect.Collector, metrics ...string)
+	SetSource(c collect.Collector)
 	SetDestination(w io.Writer) error
 	AddMetrics(metrics ...string) error
 	RemoveMetrics(metrics ...string) error
@@ -32,11 +34,18 @@ type ConsoleWriter struct {
 	Interval    time.Duration
 }
 
-func NewConsoleWriter() *ConsoleWriter {
-	return &ConsoleWriter{
+func NewConsoleWriter(c collect.Collector) (MetricsWriter, error) {
+	if c == nil {
+		return nil, ErrInvalidCollector
+	}
+
+	cw := &ConsoleWriter{
 		MetricsKeys: make([]string, 0),
 		Interval:    time.Second,
 	}
+	cw.SetSource(c)
+	cw.SetDestination(os.Stdout)
+	return cw, nil
 }
 
 func (cw *ConsoleWriter) SetSource(c collect.Collector) {

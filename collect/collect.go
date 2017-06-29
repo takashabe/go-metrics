@@ -105,6 +105,31 @@ func (m *HistogramMetrics) Aggregate() map[string]Data {
 	}
 }
 
+func (m *HistogramMetrics) MarshalJSONWithOrder() ([]byte, error) {
+	sortKeys := make([]string, 0)
+	agg := m.Aggregate()
+	for k, _ := range agg {
+		sortKeys = append(sortKeys, k)
+	}
+	sort.Strings(sortKeys)
+
+	// create json
+	var buf bytes.Buffer
+	buf.Write([]byte("{"))
+	for k, v := range sortKeys {
+		if k != 0 {
+			buf.Write([]byte(","))
+		}
+		value, err := agg[v].MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		buf.Write([]byte(fmt.Sprintf("%q:%s", v, value)))
+	}
+	buf.Write([]byte("}"))
+	return buf.Bytes(), nil
+}
+
 func (m *HistogramMetrics) count() Data {
 	m.value.RLock()
 	defer m.value.RUnlock()
@@ -302,7 +327,14 @@ func (c *SimpleCollector) GetMetrics(key string) ([]byte, error) {
 	if !ok {
 		return nil, ErrNotFoundMetrics
 	}
-	return json.Marshal(m.Aggregate())
+
+	// need sort keys?
+	switch m := m.(type) {
+	case *HistogramMetrics:
+		return m.MarshalJSONWithOrder()
+	default:
+		return json.Marshal(m.Aggregate())
+	}
 }
 
 func (c *SimpleCollector) GetMetricsKeys() []string {

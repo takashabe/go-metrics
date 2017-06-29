@@ -213,6 +213,7 @@ func TestGetMetrics(t *testing.T) {
 	c.Set("s", "a")
 	c.Set("s", "b")
 
+	// counter
 	eCounter := []byte(`{"c":1.0}`)
 	mCounter, err := c.GetMetrics("c")
 	if err != nil {
@@ -222,6 +223,18 @@ func TestGetMetrics(t *testing.T) {
 		t.Errorf("want %s, got %s", eCounter, mCounter)
 	}
 
+	// histogram
+	// note: expect sorted metrics
+	eHistogram := []byte(`{"h.95percentile":0.0,"h.avg":1.0,"h.count":1.0,"h.max":1.0,"h.median":1.0}`)
+	mHistogram, err := c.GetMetrics("h")
+	if err != nil {
+		t.Fatalf("want no error, got %v", err)
+	}
+	if !reflect.DeepEqual(mHistogram, eHistogram) {
+		t.Errorf("want %s, got %s", eHistogram, mHistogram)
+	}
+
+	// set
 	eSet := []byte(`{"s":["a","b"]}`)
 	mSet, err := c.GetMetrics("s")
 	if err != nil {

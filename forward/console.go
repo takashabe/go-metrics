@@ -86,24 +86,31 @@ func (cw *ConsoleWriter) RemoveMetrics(metrics ...string) error {
 }
 
 func (cw *ConsoleWriter) Flush() error {
-	keys := cw.MetricsKeys
-	max := len(keys)
+	buf, err := getMergedMetrics(cw.Source, cw.MetricsKeys...)
+	if err != nil {
+		return err
+	}
+	_, err = cw.Destination.Write(buf.Bytes())
+	return err
+}
+
+// getMergedMetrics return a merged metrics data
+func getMergedMetrics(c collect.Collector, keys ...string) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 	buf.WriteByte('{')
 	for k, v := range keys {
-		b, err := cw.Source.GetMetrics(v)
+		b, err := c.GetMetrics(v)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// trim "{}" and merge all metrics
 		b = bytes.TrimLeft(b, "{")
 		b = bytes.TrimRight(b, "}")
 		buf.Write(b)
-		if k != max-1 {
+		if k != len(keys)-1 {
 			buf.WriteByte(',')
 		}
 	}
 	buf.WriteByte('}')
-	_, err := cw.Destination.Write(buf.Bytes())
-	return err
+	return &buf, nil
 }

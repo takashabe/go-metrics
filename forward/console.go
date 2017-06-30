@@ -2,6 +2,8 @@ package forward
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"io"
 	"os"
 	"sort"
@@ -113,4 +115,21 @@ func getMergedMetrics(c collect.Collector, keys ...string) (*bytes.Buffer, error
 	}
 	buf.WriteByte('}')
 	return &buf, nil
+}
+
+func (cw *ConsoleWriter) RunStream(ctx context.Context) error {
+	go func() {
+		t := time.NewTicker(cw.Interval)
+		for {
+			select {
+			case <-t.C:
+				cw.Flush()
+			case <-ctx.Done():
+				t.Stop()
+				fmt.Println("finish stream...")
+				return
+			}
+		}
+	}()
+	return nil
 }

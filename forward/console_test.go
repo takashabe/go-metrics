@@ -2,9 +2,13 @@ package forward
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"reflect"
+	"runtime"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/takashabe/go-metrics/collect"
 )
@@ -131,5 +135,28 @@ func TestFlush(t *testing.T) {
 	expect := []byte(`{"a":1.0,"b":1.0,"h.95percentile":0.0,"h.avg":1.0,"h.count":1.0,"h.max":1.0,"h.median":1.0,"s":["A","B"],"s2":["A'"]}`)
 	if !reflect.DeepEqual(buf.Bytes(), expect) {
 		t.Errorf("want %s, got %s", buf.Bytes(), expect)
+	}
+}
+
+func TestStream(t *testing.T) {
+	cw := createDummyConsoleWriterWithKeys(t, []string{"a", "b", "c"}...)
+	cw.AddMetrics(cw.Source.GetMetricsKeys()...)
+
+	var buf bytes.Buffer
+	cw.SetDestination(&buf)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cw.Interval = 10 * time.Millisecond
+	cw.RunStream(ctx)
+	time.Sleep(50 * time.Millisecond)
+	before := runtime.NumGoroutine()
+	cancel()
+	time.Sleep(50 * time.Millisecond)
+	if after := runtime.NumGoroutine(); before-1 != after {
+		t.Errorf("want num %d, got %d", before-1, after)
+	}
+	gotBuf := buf.String()
+	if expectBuf := `{"a":1.0,"b"`; !strings.HasPrefix(gotBuf, expectBuf) {
+		t.Errorf("want has prefix %s, got %s", expectBuf, gotBuf[:len(expectBuf)])
 	}
 }

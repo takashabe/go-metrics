@@ -92,7 +92,7 @@ func (cw *ConsoleWriter) Flush() error {
 	if err != nil {
 		return err
 	}
-	_, err = cw.Destination.Write(buf.Bytes())
+	_, err = io.Copy(cw.Destination, buf)
 	return err
 }
 

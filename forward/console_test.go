@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"reflect"
 	"runtime"
 	"strings"
@@ -138,25 +139,66 @@ func TestFlush(t *testing.T) {
 	}
 }
 
+// NoticeWriter is implement io.Writer and notice via C at call Write() method
+type NoticeWriter struct {
+	buf    bytes.Buffer
+	sendCh chan error
+	C      <-chan error
+}
+
+// NewWriter return new NoticeWriter object
+func NewWriter() *NoticeWriter {
+	var b bytes.Buffer
+	c := make(chan error, 1)
+	return &NoticeWriter{
+		buf: b,
+
+		// shared channel
+		sendCh: c,
+		C:      c, // export, receive only
+	}
+}
+
+// Write call internal write method and send error to channel
+func (w *NoticeWriter) Write(p []byte) (int, error) {
+	n, err := w.buf.Write(p)
+	w.sendCh <- err
+	return n, err
+}
+
+// Read call internal read method
+func (w *NoticeWriter) Read(p []byte) (int, error) {
+	return w.buf.Read(p)
+}
+
 func TestStream(t *testing.T) {
 	cw := createDummyConsoleWriterWithKeys(t, []string{"a", "b", "c"}...)
 	cw.AddMetrics(cw.Source.GetMetricsKeys()...)
 
-	var buf bytes.Buffer
-	cw.SetDestination(&buf)
-
-	ctx, cancel := context.WithCancel(context.Background())
+	nw := NewWriter()
+	cw.SetDestination(nw)
 	cw.Interval = 10 * time.Millisecond
+
+	// testing cancel
+	ctx, cancel := context.WithCancel(context.Background())
 	cw.RunStream(ctx)
-	time.Sleep(50 * time.Millisecond)
 	before := runtime.NumGoroutine()
+	for i := 0; i < 2; i++ {
+		<-nw.C
+	}
 	cancel()
 	time.Sleep(50 * time.Millisecond)
 	if after := runtime.NumGoroutine(); before-1 != after {
 		t.Errorf("want num %d, got %d", before-1, after)
 	}
-	gotBuf := buf.String()
-	if expectBuf := `{"a":1.0,"b"`; !strings.HasPrefix(gotBuf, expectBuf) {
-		t.Errorf("want has prefix %s, got %s", expectBuf, gotBuf[:len(expectBuf)])
+
+	// testing writer
+	var buf bytes.Buffer
+	_, err := io.Copy(&buf, nw)
+	if err != nil {
+		t.Fatalf("want no error, got %v", err)
+	}
+	if expectBuf := `{"a":1.0,"b"`; !strings.HasPrefix(buf.String(), expectBuf) {
+		t.Errorf("want has prefix %s, got %s", expectBuf, buf.String()[:len(expectBuf)])
 	}
 }

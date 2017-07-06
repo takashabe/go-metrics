@@ -1,3 +1,4 @@
+// Package forward implements collected metrics data forward to other resouce
 package forward
 
 import (

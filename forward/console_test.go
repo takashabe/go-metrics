@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/takashabe/go-metrics/collect"
+	noticeio "github.com/takashabe/go-notice-io"
 )
 
 func createDummyConsoleWriterWithKeys(t *testing.T, keys ...string) *ConsoleWriter {
@@ -139,43 +140,11 @@ func TestFlush(t *testing.T) {
 	}
 }
 
-// NoticeWriter is implement io.Writer and notice via C at call Write() method
-type NoticeWriter struct {
-	buf    bytes.Buffer
-	sendCh chan error
-	C      <-chan error
-}
-
-// NewWriter return new NoticeWriter object
-func NewWriter() *NoticeWriter {
-	var b bytes.Buffer
-	c := make(chan error, 1)
-	return &NoticeWriter{
-		buf: b,
-
-		// shared channel
-		sendCh: c,
-		C:      c, // export, receive only
-	}
-}
-
-// Write call internal write method and send error to channel
-func (w *NoticeWriter) Write(p []byte) (int, error) {
-	n, err := w.buf.Write(p)
-	w.sendCh <- err
-	return n, err
-}
-
-// Read call internal read method
-func (w *NoticeWriter) Read(p []byte) (int, error) {
-	return w.buf.Read(p)
-}
-
 func TestStream(t *testing.T) {
 	cw := createDummyConsoleWriterWithKeys(t, []string{"a", "b", "c"}...)
 	cw.AddMetrics(cw.Source.GetMetricsKeys()...)
 
-	nw := NewWriter()
+	nw := noticeio.NewBufferWithChannel(nil, make(chan error, 1))
 	cw.SetDestination(nw)
 	cw.Interval = 10 * time.Millisecond
 
@@ -184,7 +153,7 @@ func TestStream(t *testing.T) {
 	cw.RunStream(ctx)
 	before := runtime.NumGoroutine()
 	for i := 0; i < 2; i++ {
-		<-nw.C
+		<-nw.WriteCh
 	}
 	cancel()
 	time.Sleep(50 * time.Millisecond)

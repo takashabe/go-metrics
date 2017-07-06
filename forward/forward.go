@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"time"
 
@@ -21,44 +20,44 @@ var (
 // MetricsWriter is write metrics interface
 type MetricsWriter interface {
 	SetSource(c collect.Collector)
-	SetDestination(w io.Writer) error
+	SetDestination(w io.Writer)
 	AddMetrics(metrics ...string) error
 	RemoveMetrics(metrics ...string) error
 	Flush() error
 }
 
-// ConsoleWriter is implemented MetricsWriter. forward to console
-type ConsoleWriter struct {
+// SimpleWriter is implemented MetricsWriter. forward to any io.Writer
+type SimpleWriter struct {
 	Source      collect.Collector
 	Destination io.Writer
 	MetricsKeys []string
 	Interval    time.Duration
 }
 
-func NewConsoleWriter(c collect.Collector) (MetricsWriter, error) {
+// NewSimpleWriter return new SimpleWriter
+func NewSimpleWriter(c collect.Collector, w io.Writer) (MetricsWriter, error) {
 	if c == nil {
 		return nil, ErrInvalidCollector
 	}
 
-	cw := &ConsoleWriter{
+	cw := &SimpleWriter{
 		MetricsKeys: make([]string, 0),
 		Interval:    time.Second,
 	}
 	cw.SetSource(c)
-	cw.SetDestination(os.Stdout)
+	cw.SetDestination(w)
 	return cw, nil
 }
 
-func (cw *ConsoleWriter) SetSource(c collect.Collector) {
+func (cw *SimpleWriter) SetSource(c collect.Collector) {
 	cw.Source = c
 }
 
-func (cw *ConsoleWriter) SetDestination(w io.Writer) error {
+func (cw *SimpleWriter) SetDestination(w io.Writer) {
 	cw.Destination = w
-	return nil
 }
 
-func (cw *ConsoleWriter) AddMetrics(metrics ...string) error {
+func (cw *SimpleWriter) AddMetrics(metrics ...string) error {
 	exists := cw.Source.GetMetricsKeys()
 	existMap := make(map[string]struct{})
 	for _, v := range exists {
@@ -76,7 +75,7 @@ func (cw *ConsoleWriter) AddMetrics(metrics ...string) error {
 	return nil
 }
 
-func (cw *ConsoleWriter) RemoveMetrics(metrics ...string) error {
+func (cw *SimpleWriter) RemoveMetrics(metrics ...string) error {
 	for _, m := range metrics {
 		for k, v := range cw.MetricsKeys {
 			if m == v {
@@ -87,7 +86,7 @@ func (cw *ConsoleWriter) RemoveMetrics(metrics ...string) error {
 	return nil
 }
 
-func (cw *ConsoleWriter) Flush() error {
+func (cw *SimpleWriter) Flush() error {
 	buf, err := getMergedMetrics(cw.Source, cw.MetricsKeys...)
 	if err != nil {
 		return err
@@ -117,7 +116,7 @@ func getMergedMetrics(c collect.Collector, keys ...string) (*bytes.Buffer, error
 	return &buf, nil
 }
 
-func (cw *ConsoleWriter) RunStream(ctx context.Context) error {
+func (cw *SimpleWriter) RunStream(ctx context.Context) error {
 	go func() {
 		t := time.NewTicker(cw.Interval)
 		for {

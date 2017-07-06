@@ -15,24 +15,24 @@ import (
 	noticeio "github.com/takashabe/go-notice-io"
 )
 
-func createDummyConsoleWriterWithKeys(t *testing.T, keys ...string) *ConsoleWriter {
+func createDummySimpleWriterWithKeys(t *testing.T, w io.Writer, keys ...string) *SimpleWriter {
 	sc := collect.NewSimpleCollector()
 	for _, key := range keys {
 		sc.Add(key, 1)
 	}
-	w, err := NewConsoleWriter(sc)
+	mw, err := NewSimpleWriter(sc, w)
 	if err != nil {
 		t.Fatalf("want no error, got %v", err)
 	}
-	cw, ok := w.(*ConsoleWriter)
+	sw, ok := mw.(*SimpleWriter)
 	if !ok {
-		t.Fatalf("want type *ConsoleWriter, got %v", reflect.TypeOf(w))
+		t.Fatalf("want type *SimpleWriter, got %v", reflect.TypeOf(mw))
 	}
-	return cw
+	return sw
 }
 
 func TestAddMetrics(t *testing.T) {
-	cw := createDummyConsoleWriterWithKeys(t, []string{"a", "b", "c"}...)
+	cw := createDummySimpleWriterWithKeys(t, nil, []string{"a", "b", "c"}...)
 
 	cases := []struct {
 		keys       []string
@@ -67,7 +67,7 @@ func TestAddMetrics(t *testing.T) {
 }
 
 func TestRemoveMetrics(t *testing.T) {
-	cw := createDummyConsoleWriterWithKeys(t, []string{"a", "b", "c"}...)
+	cw := createDummySimpleWriterWithKeys(t, nil, []string{"a", "b", "c"}...)
 	cw.AddMetrics(cw.Source.GetMetricsKeys()...)
 
 	cases := []struct {
@@ -111,21 +111,19 @@ func TestFlush(t *testing.T) {
 	sc.Set("s", "A")
 	sc.Set("s", "B")
 	sc.Set("s2", "A'")
-	w, err := NewConsoleWriter(sc)
+	w, err := NewSimpleWriter(sc, nil)
 	if err != nil {
 		t.Fatalf("want no error, got %v", err)
 	}
-	cw, ok := w.(*ConsoleWriter)
+	cw, ok := w.(*SimpleWriter)
 	if !ok {
-		t.Fatalf("want type *ConsoleWriter, got %v", reflect.TypeOf(w))
+		t.Fatalf("want type *SimpleWriter, got %v", reflect.TypeOf(w))
 	}
 	cw.AddMetrics(cw.Source.GetMetricsKeys()...)
 
 	// change writer for testing
 	var buf bytes.Buffer
-	if err := cw.SetDestination(&buf); err != nil {
-		t.Fatalf("want no error, got %v", err)
-	}
+	cw.SetDestination(&buf)
 	if err := cw.Flush(); err != nil {
 		t.Fatalf("want no error, got %v", err)
 	}
@@ -141,7 +139,7 @@ func TestFlush(t *testing.T) {
 }
 
 func TestStream(t *testing.T) {
-	cw := createDummyConsoleWriterWithKeys(t, []string{"a", "b", "c"}...)
+	cw := createDummySimpleWriterWithKeys(t, nil, []string{"a", "b", "c"}...)
 	cw.AddMetrics(cw.Source.GetMetricsKeys()...)
 
 	nw := noticeio.NewBufferWithChannel(nil, make(chan error, 1))

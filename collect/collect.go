@@ -1,3 +1,4 @@
+// Package collect implements collect metrics data
 package collect
 
 import (

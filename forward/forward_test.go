@@ -154,7 +154,7 @@ func TestStream(t *testing.T) {
 		<-nw.WriteCh
 	}
 	cancel()
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 	if after := runtime.NumGoroutine(); before-1 != after {
 		t.Errorf("want num %d, got %d", before-1, after)
 	}

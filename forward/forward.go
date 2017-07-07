@@ -4,7 +4,6 @@ package forward
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"sort"
 	"time"
@@ -25,6 +24,7 @@ type MetricsWriter interface {
 	AddMetrics(metrics ...string) error
 	RemoveMetrics(metrics ...string) error
 	Flush() error
+	RunStream(ctx context.Context)
 }
 
 // SimpleWriter is implemented MetricsWriter. forward to any io.Writer
@@ -59,40 +59,59 @@ func (cw *SimpleWriter) SetDestination(w io.Writer) {
 }
 
 func (cw *SimpleWriter) AddMetrics(metrics ...string) error {
-	exists := cw.Source.GetMetricsKeys()
-	existMap := make(map[string]struct{})
-	for _, v := range exists {
-		existMap[v] = struct{}{}
-	}
-
-	for _, key := range metrics {
-		if _, ok := existMap[key]; !ok {
-			return ErrNotExistMetrics
-		}
-	}
-
-	cw.MetricsKeys = append(cw.MetricsKeys, metrics...)
-	sort.Strings(cw.MetricsKeys)
-	return nil
-}
-
-func (cw *SimpleWriter) RemoveMetrics(metrics ...string) error {
-	for _, m := range metrics {
-		for k, v := range cw.MetricsKeys {
-			if m == v {
-				cw.MetricsKeys = append(cw.MetricsKeys[:k], cw.MetricsKeys[k+1:]...)
-			}
-		}
-	}
-	return nil
-}
-
-func (cw *SimpleWriter) Flush() error {
-	buf, err := getMergedMetrics(cw.Source, cw.MetricsKeys...)
+	s, err := addMetrics(cw.Source.GetMetricsKeys(), cw.MetricsKeys, metrics)
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(cw.Destination, buf)
+
+	cw.MetricsKeys = s
+	return nil
+}
+
+func addMetrics(src []string, dst []string, adds []string) ([]string, error) {
+	existMap := make(map[string]struct{})
+	for _, v := range src {
+		existMap[v] = struct{}{}
+	}
+
+	for _, key := range adds {
+		if _, ok := existMap[key]; !ok {
+			return nil, ErrNotExistMetrics
+		}
+	}
+
+	dst = append(dst, adds...)
+	sort.Strings(dst)
+	return dst, nil
+}
+
+func (cw *SimpleWriter) RemoveMetrics(metrics ...string) error {
+	cw.MetricsKeys = subSlice(cw.MetricsKeys, metrics)
+	return nil
+}
+
+func subSlice(source []string, removes []string) []string {
+	for _, m := range removes {
+		for k, v := range source {
+			if m == v {
+				source = append(source[:k], source[k+1:]...)
+			}
+		}
+	}
+	return source
+}
+
+func (cw *SimpleWriter) Flush() error {
+	return flush(cw.Source, cw.Destination, cw.MetricsKeys...)
+}
+
+// flush write to Destination writer from collector
+func flush(c collect.Collector, w io.Writer, keys ...string) error {
+	buf, err := getMergedMetrics(c, keys...)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(w, buf)
 	return err
 }
 
@@ -117,19 +136,19 @@ func getMergedMetrics(c collect.Collector, keys ...string) (*bytes.Buffer, error
 	return &buf, nil
 }
 
-func (cw *SimpleWriter) RunStream(ctx context.Context) error {
-	go func() {
-		t := time.NewTicker(cw.Interval)
-		for {
-			select {
-			case <-t.C:
-				cw.Flush()
-			case <-ctx.Done():
-				t.Stop()
-				fmt.Println("finish stream...")
-				return
-			}
+func (cw *SimpleWriter) RunStream(ctx context.Context) {
+	go runStream(ctx, cw, cw.Interval)
+}
+
+func runStream(ctx context.Context, writer MetricsWriter, interval time.Duration) {
+	t := time.NewTicker(interval)
+	for {
+		select {
+		case <-t.C:
+			writer.Flush()
+		case <-ctx.Done():
+			t.Stop()
+			return
 		}
-	}()
-	return nil
+	}
 }

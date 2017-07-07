@@ -1,9 +1,9 @@
 package forward
 
 import (
+	"context"
 	"io"
 	"net"
-	"sort"
 	"time"
 
 	"github.com/takashabe/go-metrics/collect"
@@ -46,39 +46,24 @@ func (cw *NetWriter) SetDestination(w io.Writer) {
 }
 
 func (cw *NetWriter) AddMetrics(metrics ...string) error {
-	exists := cw.Source.GetMetricsKeys()
-	existMap := make(map[string]struct{})
-	for _, v := range exists {
-		existMap[v] = struct{}{}
+	s, err := addMetrics(cw.Source.GetMetricsKeys(), cw.MetricsKeys, metrics)
+	if err != nil {
+		return err
 	}
 
-	for _, key := range metrics {
-		if _, ok := existMap[key]; !ok {
-			return ErrNotExistMetrics
-		}
-	}
-
-	cw.MetricsKeys = append(cw.MetricsKeys, metrics...)
-	sort.Strings(cw.MetricsKeys)
+	cw.MetricsKeys = s
 	return nil
 }
 
 func (cw *NetWriter) RemoveMetrics(metrics ...string) error {
-	for _, m := range metrics {
-		for k, v := range cw.MetricsKeys {
-			if m == v {
-				cw.MetricsKeys = append(cw.MetricsKeys[:k], cw.MetricsKeys[k+1:]...)
-			}
-		}
-	}
+	cw.MetricsKeys = subSlice(cw.MetricsKeys, metrics)
 	return nil
 }
 
 func (cw *NetWriter) Flush() error {
-	buf, err := getMergedMetrics(cw.Source, cw.MetricsKeys...)
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(cw.Destination, buf)
-	return err
+	return flush(cw.Source, cw.Destination, cw.MetricsKeys...)
+}
+
+func (cw *NetWriter) RunStream(ctx context.Context) {
+	go runStream(ctx, cw, cw.Interval)
 }

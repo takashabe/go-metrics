@@ -139,6 +139,7 @@ func TestFlush(t *testing.T) {
 }
 
 func TestStream(t *testing.T) {
+	expect := `{"a":1.0,"b":1.0,"c":1.0}`
 	cw := createDummySimpleWriterWithKeys(t, nil, []string{"a", "b", "c"}...)
 	cw.AddMetrics(cw.Source.GetMetricsKeys()...)
 
@@ -151,6 +152,7 @@ func TestStream(t *testing.T) {
 	cw.RunStream(ctx)
 	before := runtime.NumGoroutine()
 	for i := 0; i < 2; i++ {
+		// waiting write twice
 		<-nw.WriteCh
 	}
 	cancel()
@@ -160,12 +162,13 @@ func TestStream(t *testing.T) {
 	}
 
 	// testing writer
-	var buf bytes.Buffer
-	_, err := io.Copy(&buf, nw)
+	bs := make([]byte, 1024)
+	n, err := nw.Read(bs)
 	if err != nil {
 		t.Fatalf("want no error, got %v", err)
 	}
-	if expectBuf := `{"a":1.0,"b"`; !strings.HasPrefix(buf.String(), expectBuf) {
-		t.Errorf("want has prefix %s, got %s", expectBuf, buf.String()[:len(expectBuf)])
+	message := string(bs[:n])
+	if !strings.HasPrefix(message, expect) {
+		t.Errorf("want has prefix %s, got %s", expect, message[:len(expect)])
 	}
 }

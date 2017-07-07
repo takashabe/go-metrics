@@ -23,11 +23,7 @@ func NewNetWriter(c collect.Collector, addr string) (MetricsWriter, error) {
 		return nil, ErrInvalidCollector
 	}
 
-	udpAddr, err := net.ResolveUDPAddr("udp", addr)
-	if err != nil {
-		return nil, err
-	}
-	conn, err := net.DialUDP("udp", nil, udpAddr)
+	conn, err := net.Dial("udp", addr)
 	if err != nil {
 		return nil, err
 	}

@@ -6,3 +6,6 @@ test:
 
 vet:
 	go vet $(SUBPACKAGES)
+
+lint:
+	golint $(SUBPACKAGES)

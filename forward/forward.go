@@ -12,6 +12,7 @@ import (
 	"github.com/takashabe/go-metrics/collect"
 )
 
+// Error variables
 var (
 	ErrInvalidCollector = errors.New("invalid collector source")
 	ErrNotExistMetrics  = errors.New("not exist metrics key")
@@ -50,14 +51,17 @@ func NewSimpleWriter(c collect.Collector, w io.Writer) (MetricsWriter, error) {
 	return cw, nil
 }
 
+// SetSource setting collector
 func (cw *SimpleWriter) SetSource(c collect.Collector) {
 	cw.Source = c
 }
 
+// SetDestination setting writer
 func (cw *SimpleWriter) SetDestination(w io.Writer) {
 	cw.Destination = w
 }
 
+// AddMetrics register metrics keys when exist collector
 func (cw *SimpleWriter) AddMetrics(metrics ...string) error {
 	s, err := addMetrics(cw.Source.GetMetricsKeys(), cw.MetricsKeys, metrics)
 	if err != nil {
@@ -85,6 +89,7 @@ func addMetrics(src []string, dst []string, adds []string) ([]string, error) {
 	return dst, nil
 }
 
+// RemoveMetrics remove metrics
 func (cw *SimpleWriter) RemoveMetrics(metrics ...string) error {
 	cw.MetricsKeys = subSlice(cw.MetricsKeys, metrics)
 	return nil
@@ -101,6 +106,7 @@ func subSlice(source []string, removes []string) []string {
 	return source
 }
 
+// Flush write metrics data for destination writer
 func (cw *SimpleWriter) Flush() error {
 	return flush(cw.Source, cw.Destination, cw.MetricsKeys...)
 }
@@ -136,6 +142,7 @@ func getMergedMetrics(c collect.Collector, keys ...string) (*bytes.Buffer, error
 	return &buf, nil
 }
 
+// RunStream run Flush() goroutine
 func (cw *SimpleWriter) RunStream(ctx context.Context) {
 	go runStream(ctx, cw, cw.Interval)
 }

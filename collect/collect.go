@@ -20,6 +20,7 @@ var (
 // MetricType is metric types
 type MetricType int
 
+// Enum of MetricType
 const (
 	_ MetricType = iota
 	TypeCounter
@@ -55,6 +56,7 @@ type CounterMetrics struct {
 	value *Float
 }
 
+// Aggregate return counter key and value
 func (m *CounterMetrics) Aggregate() map[string]Data {
 	m.value.RLock()
 	defer m.value.RUnlock()
@@ -63,6 +65,7 @@ func (m *CounterMetrics) Aggregate() map[string]Data {
 	}
 }
 
+// GetType return MetricType
 func (m *CounterMetrics) GetType() MetricType {
 	return TypeCounter
 }
@@ -73,12 +76,14 @@ type GaugeMetrics struct {
 	value *Float
 }
 
+// Aggregate return gauge key and value
 func (m *GaugeMetrics) Aggregate() map[string]Data {
 	return map[string]Data{
 		m.key: m.value,
 	}
 }
 
+// GetType return MetricType
 func (m *GaugeMetrics) GetType() MetricType {
 	return TypeGauge
 }
@@ -92,6 +97,7 @@ type HistogramMetrics struct {
 // minPercentileSize is minimum number of size for percentile analysis
 const minPercentileSize = 2
 
+// Aggregate returns aggregated histogram metrics
 func (m *HistogramMetrics) Aggregate() map[string]Data {
 	m.value.Lock()
 	sort.Float64s(m.value.v)
@@ -106,10 +112,11 @@ func (m *HistogramMetrics) Aggregate() map[string]Data {
 	}
 }
 
+// MarshalJSONWithOrder return keeped order json
 func (m *HistogramMetrics) MarshalJSONWithOrder() ([]byte, error) {
 	sortKeys := make([]string, 0)
 	agg := m.Aggregate()
-	for k, _ := range agg {
+	for k := range agg {
 		sortKeys = append(sortKeys, k)
 	}
 	sort.Strings(sortKeys)
@@ -199,6 +206,7 @@ func (m *HistogramMetrics) percentile(n float64) Data {
 	}
 }
 
+// GetType return MetricType
 func (m *HistogramMetrics) GetType() MetricType {
 	return TypeHistogram
 }
@@ -209,11 +217,12 @@ type SetMetrics struct {
 	value *Map
 }
 
+// Aggregate return sorted sort key and value
 func (m *SetMetrics) Aggregate() map[string]Data {
 	m.value.RLock()
 	defer m.value.RUnlock()
 	s := make([]string, 0)
-	for k, _ := range m.value.v {
+	for k := range m.value.v {
 		s = append(s, k)
 	}
 	sort.Strings(s)
@@ -225,6 +234,7 @@ func (m *SetMetrics) Aggregate() map[string]Data {
 	}
 }
 
+// GetType return MetricType
 func (m *SetMetrics) GetType() MetricType {
 	return TypeSet
 }
@@ -240,6 +250,7 @@ type Float struct {
 	sync.RWMutex
 }
 
+// MarshalJSON return specific encoded json
 func (f *Float) MarshalJSON() ([]byte, error) {
 	f.RLock()
 	defer f.RUnlock()
@@ -264,6 +275,7 @@ type StringSlice struct {
 	sync.RWMutex
 }
 
+// MarshalJSON return specific encoded json
 func (s *StringSlice) MarshalJSON() ([]byte, error) {
 	s.RLock()
 	defer s.RUnlock()
@@ -279,11 +291,13 @@ func (s *StringSlice) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// FloatSlice is used by collect metrics
 type FloatSlice struct {
 	v []float64
 	sync.RWMutex
 }
 
+// Map is used by collect metrics
 type Map struct {
 	v map[string]struct{}
 	sync.RWMutex
@@ -314,12 +328,14 @@ type SimpleCollector struct {
 	sync.RWMutex
 }
 
+// NewSimpleCollector return new SimpleCollector
 func NewSimpleCollector() *SimpleCollector {
 	return &SimpleCollector{
 		metrics: make(map[string]Metrics),
 	}
 }
 
+// GetMetrics returns json from encoded metrics
 func (c *SimpleCollector) GetMetrics(key string) ([]byte, error) {
 	c.RLock()
 	defer c.RUnlock()
@@ -338,11 +354,12 @@ func (c *SimpleCollector) GetMetrics(key string) ([]byte, error) {
 	}
 }
 
+// GetMetricsKeys returns keeps metrics keys
 func (c *SimpleCollector) GetMetricsKeys() []string {
 	c.RLock()
 	defer c.RUnlock()
 	res := make([]string, 0)
-	for k, _ := range c.metrics {
+	for k := range c.metrics {
 		res = append(res, k)
 	}
 	sort.Strings(res)

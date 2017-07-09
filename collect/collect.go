@@ -58,8 +58,8 @@ type CounterMetrics struct {
 
 // Aggregate return counter key and value
 func (m *CounterMetrics) Aggregate() map[string]Data {
-	m.value.RLock()
-	defer m.value.RUnlock()
+	m.value.mu.RLock()
+	defer m.value.mu.RUnlock()
 	return map[string]Data{
 		m.key: m.value,
 	}
@@ -99,9 +99,9 @@ const minPercentileSize = 2
 
 // Aggregate returns aggregated histogram metrics
 func (m *HistogramMetrics) Aggregate() map[string]Data {
-	m.value.Lock()
+	m.value.mu.Lock()
 	sort.Float64s(m.value.v)
-	m.value.Unlock()
+	m.value.mu.Unlock()
 
 	return map[string]Data{
 		m.key + ".count":        m.count(),
@@ -139,16 +139,16 @@ func (m *HistogramMetrics) MarshalJSONWithOrder() ([]byte, error) {
 }
 
 func (m *HistogramMetrics) count() Data {
-	m.value.RLock()
-	defer m.value.RUnlock()
+	m.value.mu.RLock()
+	defer m.value.mu.RUnlock()
 	return &Float{
 		f: float64(len(m.value.v)),
 	}
 }
 
 func (m *HistogramMetrics) average() Data {
-	m.value.RLock()
-	defer m.value.RUnlock()
+	m.value.mu.RLock()
+	defer m.value.mu.RUnlock()
 	var total float64
 	for _, v := range m.value.v {
 		total += v
@@ -160,8 +160,8 @@ func (m *HistogramMetrics) average() Data {
 
 // note: expect sorted list
 func (m *HistogramMetrics) max() Data {
-	m.value.RLock()
-	defer m.value.RUnlock()
+	m.value.mu.RLock()
+	defer m.value.mu.RUnlock()
 	var max float64
 	if size := len(m.value.v); size > 0 {
 		max = m.value.v[size-1]
@@ -173,8 +173,8 @@ func (m *HistogramMetrics) max() Data {
 
 // note: expect sorted list
 func (m *HistogramMetrics) median() Data {
-	m.value.RLock()
-	defer m.value.RUnlock()
+	m.value.mu.RLock()
+	defer m.value.mu.RUnlock()
 	var median float64
 	if size := len(m.value.v); size > 0 {
 		median = m.value.v[size/2]
@@ -186,8 +186,8 @@ func (m *HistogramMetrics) median() Data {
 
 // note: expect sorted list
 func (m *HistogramMetrics) percentile(n float64) Data {
-	m.value.RLock()
-	defer m.value.RUnlock()
+	m.value.mu.RLock()
+	defer m.value.mu.RUnlock()
 	list := m.value.v
 	if 1.0 <= n || len(list) < minPercentileSize {
 		return &Float{}
@@ -219,8 +219,8 @@ type SetMetrics struct {
 
 // Aggregate return sorted sort key and value
 func (m *SetMetrics) Aggregate() map[string]Data {
-	m.value.RLock()
-	defer m.value.RUnlock()
+	m.value.mu.RLock()
+	defer m.value.mu.RUnlock()
 	s := make([]string, 0)
 	for k := range m.value.v {
 		s = append(s, k)
@@ -246,39 +246,39 @@ type Data interface {
 
 // Float is implemented Data
 type Float struct {
-	f float64
-	sync.RWMutex
+	f  float64
+	mu sync.RWMutex
 }
 
 // MarshalJSON return specific encoded json
 func (f *Float) MarshalJSON() ([]byte, error) {
-	f.RLock()
-	defer f.RUnlock()
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 	return []byte(fmt.Sprintf("%.1f", f.f)), nil
 }
 
 func (f *Float) add(delta float64) {
-	f.Lock()
-	defer f.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.f += delta
 }
 
 func (f *Float) set(delta float64) {
-	f.Lock()
-	defer f.Unlock()
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.f = delta
 }
 
 // StringSlice is implemented Data
 type StringSlice struct {
-	s []string
-	sync.RWMutex
+	s  []string
+	mu sync.RWMutex
 }
 
 // MarshalJSON return specific encoded json
 func (s *StringSlice) MarshalJSON() ([]byte, error) {
-	s.RLock()
-	defer s.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "[")
 	for k, v := range s.s {
@@ -293,19 +293,19 @@ func (s *StringSlice) MarshalJSON() ([]byte, error) {
 
 // FloatSlice is used by collect metrics
 type FloatSlice struct {
-	v []float64
-	sync.RWMutex
+	v  []float64
+	mu sync.RWMutex
 }
 
 // Map is used by collect metrics
 type Map struct {
-	v map[string]struct{}
-	sync.RWMutex
+	v  map[string]struct{}
+	mu sync.RWMutex
 }
 
 func (m *Map) set(s string) {
-	m.Lock()
-	defer m.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.v[s] = struct{}{}
 }
 
@@ -325,7 +325,7 @@ type Collector interface {
 // SimpleCollector is implemented Collector
 type SimpleCollector struct {
 	metrics map[string]Metrics
-	sync.RWMutex
+	mu      sync.RWMutex
 }
 
 // NewSimpleCollector return new SimpleCollector
@@ -337,8 +337,8 @@ func NewSimpleCollector() *SimpleCollector {
 
 // GetMetrics returns json from encoded metrics
 func (c *SimpleCollector) GetMetrics(key string) ([]byte, error) {
-	c.RLock()
-	defer c.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	m, ok := c.metrics[key]
 	if !ok {
@@ -356,8 +356,8 @@ func (c *SimpleCollector) GetMetrics(key string) ([]byte, error) {
 
 // GetMetricsKeys returns keeps metrics keys
 func (c *SimpleCollector) GetMetricsKeys() []string {
-	c.RLock()
-	defer c.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	res := make([]string, 0)
 	for k := range c.metrics {
 		res = append(res, k)
@@ -368,8 +368,8 @@ func (c *SimpleCollector) GetMetricsKeys() []string {
 
 // Add add count for CounterMetrics
 func (c *SimpleCollector) Add(key string, delta float64) {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// add key
 	if _, dup := c.metrics[key]; !dup {
@@ -387,8 +387,8 @@ func (c *SimpleCollector) Add(key string, delta float64) {
 
 // Gauge set metrics for GaugeMetrics
 func (c *SimpleCollector) Gauge(key string, delta float64) {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// add key
 	if _, dup := c.metrics[key]; !dup {
@@ -406,8 +406,8 @@ func (c *SimpleCollector) Gauge(key string, delta float64) {
 
 // Histogram add metrics for Histogram
 func (c *SimpleCollector) Histogram(key string, delta float64) {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// add key
 	if _, dup := c.metrics[key]; !dup {
@@ -427,8 +427,8 @@ func (c *SimpleCollector) Histogram(key string, delta float64) {
 
 // Set add metrics for Set
 func (c *SimpleCollector) Set(key string, delta string) {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// add key
 	if _, dup := c.metrics[key]; !dup {

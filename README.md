@@ -102,7 +102,7 @@ func forwardUDP(ctx context.Context, c collect.Collector) {
 }
 ```
 
-## collect metircs type
+## Metircs type
 
 | Type      | Detail                                                                                                                                                       |
 | ---       | ---                                                                                                                                                          |

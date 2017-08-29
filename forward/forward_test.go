@@ -102,15 +102,19 @@ func TestRemoveMetrics(t *testing.T) {
 	}
 }
 
+func registerDummyMetrics(t *testing.T, c collect.Collector) {
+	c.Add("a", 1)
+	c.Add("b", 1)
+	c.Histogram("h", 1)
+	c.Set("s", "A")
+	c.Set("s", "B")
+	c.Set("s2", "A'")
+}
+
 func TestFlush(t *testing.T) {
 	// setup mixed metrics collector
 	sc := collect.NewSimpleCollector()
-	sc.Add("a", 1)
-	sc.Add("b", 1)
-	sc.Histogram("h", 1)
-	sc.Set("s", "A")
-	sc.Set("s", "B")
-	sc.Set("s2", "A'")
+	registerDummyMetrics(t, sc)
 	w, err := NewSimpleWriter(sc, nil)
 	if err != nil {
 		t.Fatalf("want no error, got %v", err)
@@ -133,6 +137,37 @@ func TestFlush(t *testing.T) {
 		t.Fatalf("want no error, got %v", err)
 	}
 	expect := []byte(`{"a":1.0,"b":1.0,"h.95percentile":0.0,"h.avg":1.0,"h.count":1.0,"h.max":1.0,"h.median":1.0,"s":["A","B"],"s2":["A'"]}`)
+	if !reflect.DeepEqual(buf.Bytes(), expect) {
+		t.Errorf("want %s, got %s", buf.Bytes(), expect)
+	}
+}
+
+func TestFlushWithKeys(t *testing.T) {
+	// setup mixed metrics collector
+	sc := collect.NewSimpleCollector()
+	registerDummyMetrics(t, sc)
+	w, err := NewSimpleWriter(sc, nil)
+	if err != nil {
+		t.Fatalf("want no error, got %v", err)
+	}
+	cw, ok := w.(*SimpleWriter)
+	if !ok {
+		t.Fatalf("want type *SimpleWriter, got %v", reflect.TypeOf(w))
+	}
+	cw.AddMetrics(cw.Source.GetMetricsKeys()...)
+
+	// change writer for testing
+	var buf bytes.Buffer
+	cw.SetDestination(&buf)
+	if err := cw.FlushWithKeys("a", "b", "s2"); err != nil {
+		t.Fatalf("want no error, got %v", err)
+	}
+	// check valid json
+	var dummy interface{}
+	if err := json.Unmarshal(buf.Bytes(), &dummy); err != nil {
+		t.Fatalf("want no error, got %v", err)
+	}
+	expect := []byte(`{"a":1.0,"b":1.0,"s2":["A'"]}`)
 	if !reflect.DeepEqual(buf.Bytes(), expect) {
 		t.Errorf("want %s, got %s", buf.Bytes(), expect)
 	}

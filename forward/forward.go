@@ -25,6 +25,7 @@ type MetricsWriter interface {
 	AddMetrics(metrics ...string) error
 	RemoveMetrics(metrics ...string) error
 	Flush() error
+	FlushWithKeys(keys ...string) error
 	RunStream(ctx context.Context)
 }
 
@@ -109,6 +110,11 @@ func subSlice(source []string, removes []string) []string {
 // Flush write metrics data for destination writer
 func (cw *SimpleWriter) Flush() error {
 	return flush(cw.Source, cw.Destination, cw.MetricsKeys...)
+}
+
+// FlushWithKeys write specific metrics data for destination writer
+func (cw *SimpleWriter) FlushWithKeys(keys ...string) error {
+	return flush(cw.Source, cw.Destination, keys...)
 }
 
 // flush write to Destination writer from collector

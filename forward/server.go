@@ -69,6 +69,11 @@ func (cw *NetWriter) Flush() error {
 	return flush(cw.Source, cw.Destination, cw.MetricsKeys...)
 }
 
+// FlushWithKeys write specific metrics data for destination writer
+func (cw *NetWriter) FlushWithKeys(keys ...string) error {
+	return flush(cw.Source, cw.Destination, keys...)
+}
+
 // RunStream run Flush() goroutine
 func (cw *NetWriter) RunStream(ctx context.Context) {
 	go runStream(ctx, cw, cw.Interval)

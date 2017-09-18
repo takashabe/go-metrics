@@ -1,4 +1,4 @@
-SUBPACKAGES := $(shell go list ./... | grep -v /vendor/)
+SUBPACKAGES := $(shell go list ./...)
 
 test:
 	$(SHOW_ENV)

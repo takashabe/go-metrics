@@ -129,13 +129,25 @@ func flush(c collect.Collector, w io.Writer, keys ...string) error {
 
 // getMergedMetrics return a merged metrics data
 func getMergedMetrics(c collect.Collector, keys ...string) (*bytes.Buffer, error) {
-	var buf bytes.Buffer
+	var (
+		buf      bytes.Buffer
+		existKey bool
+	)
 	buf.WriteByte('{')
 	for k, v := range keys {
 		b, err := c.GetMetrics(v)
 		if err != nil {
+			// ignore case
+			if errors.Cause(err) == collect.ErrNotFoundMetrics {
+				if k == len(keys)-1 {
+					buf.Truncate(buf.Len() - 1)
+				}
+				continue
+			}
 			return nil, err
 		}
+		existKey = true
+
 		// trim "{}" and merge all metrics
 		b = bytes.TrimLeft(b, "{")
 		b = bytes.TrimRight(b, "}")
@@ -145,6 +157,10 @@ func getMergedMetrics(c collect.Collector, keys ...string) (*bytes.Buffer, error
 		}
 	}
 	buf.WriteByte('}')
+
+	if !existKey {
+		return nil, collect.ErrNotFoundMetrics
+	}
 	return &buf, nil
 }
 

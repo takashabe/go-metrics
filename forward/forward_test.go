@@ -159,7 +159,7 @@ func TestFlushWithKeys(t *testing.T) {
 	// change writer for testing
 	var buf bytes.Buffer
 	cw.SetDestination(&buf)
-	if err := cw.FlushWithKeys("a", "b", "s2"); err != nil {
+	if err := cw.FlushWithKeys("unknown", "a", "unknown", "b", "s2", "unknown"); err != nil {
 		t.Fatalf("want no error, got %v", err)
 	}
 	// check valid json

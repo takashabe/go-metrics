@@ -110,3 +110,4 @@ func forwardUDP(ctx context.Context, c collect.Collector) {
 | Gauge     | A particular value at a particular time                                                                                                                      |
 | Histogram | Represents a statistical distribution of a series of values.<br> Each histogram are `count`, `average`, `minimum`, `maximum`, `median` and `95th percentile` |
 | Set       | Used to count the value of unique in a group                                                                                                                 |
+| Snapshot  | A particular value set at a particular time                                                                                                                  |

@@ -351,6 +351,7 @@ type Collector interface {
 	Gauge(string, float64)
 	Histogram(string, float64)
 	Set(string, string)
+	Snapshot(string, []string)
 }
 
 // SimpleCollector is implemented Collector

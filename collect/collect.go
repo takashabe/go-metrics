@@ -27,6 +27,7 @@ const (
 	TypeGauge
 	TypeHistogram
 	TypeSet
+	TypeSnapshot
 )
 
 func (m MetricType) String() string {
@@ -39,6 +40,8 @@ func (m MetricType) String() string {
 		return "histogram"
 	case TypeSet:
 		return "set"
+	case TypeSnapshot:
+		return "snapshot"
 	default:
 		return "not supported metric type"
 	}
@@ -237,6 +240,34 @@ func (m *SetMetrics) Aggregate() map[string]Data {
 // GetType return MetricType
 func (m *SetMetrics) GetType() MetricType {
 	return TypeSet
+}
+
+// SnapshotMetrics is implemented Metrics for Snapshot
+type SnapshotMetrics struct {
+	key   string
+	value *Map
+}
+
+// Aggregate return sorted sort key and value
+func (m *SnapshotMetrics) Aggregate() map[string]Data {
+	m.value.mu.RLock()
+	defer m.value.mu.RUnlock()
+	s := make([]string, 0)
+	for k := range m.value.v {
+		s = append(s, k)
+	}
+	sort.Strings(s)
+
+	return map[string]Data{
+		m.key: &StringSlice{
+			s: s,
+		},
+	}
+}
+
+// GetType return MetricType
+func (m *SnapshotMetrics) GetType() MetricType {
+	return TypeSnapshot
 }
 
 // Data is a metrics value
@@ -443,5 +474,26 @@ func (c *SimpleCollector) Set(key string, delta string) {
 	// add set, ignore otherwise
 	if v, ok := c.metrics[key].(*SetMetrics); ok {
 		v.value.set(delta)
+	}
+}
+
+// Snapshot add metrics for Snapshot
+func (c *SimpleCollector) Snapshot(key string, deltas []string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// add key and ignore existing key
+	c.metrics[key] = &SnapshotMetrics{
+		key: key,
+		value: &Map{
+			v: make(map[string]struct{}),
+		},
+	}
+
+	// add Snapshot, ignore otherwise
+	if v, ok := c.metrics[key].(*SnapshotMetrics); ok {
+		for _, d := range deltas {
+			v.value.set(d)
+		}
 	}
 }

@@ -169,6 +169,51 @@ func TestSet(t *testing.T) {
 	}
 }
 
+func TestSnapshot(t *testing.T) {
+	sc := NewSimpleCollector()
+	cases := []struct {
+		key    string
+		values []string
+		expect []byte
+	}{
+		{
+			"a",
+			[]string{
+				"1", "1", "2",
+			},
+			[]byte(`["1","2"]`),
+		},
+		{
+			"a",
+			[]string{
+				"1",
+			},
+			[]byte(`["1"]`),
+		},
+		{
+			"b",
+			[]string{
+				"1",
+			},
+			[]byte(`["1"]`),
+		},
+	}
+	for i, c := range cases {
+		sc.Snapshot(c.key, c.values)
+		if got := sc.metrics[c.key].GetType(); got != TypeSnapshot {
+			t.Fatalf("#%d: want type %s, got %s", i, TypeSnapshot, got)
+		}
+		agg := sc.metrics[c.key].Aggregate()
+		got, err := agg[c.key].MarshalJSON()
+		if err != nil {
+			t.Fatalf("#%d: want no error, got %v", i, err)
+		}
+		if !reflect.DeepEqual(got, c.expect) {
+			t.Errorf("#%d: want value %s, got %s", i, c.expect, got)
+		}
+	}
+}
+
 func TestMix(t *testing.T) {
 	c := NewSimpleCollector()
 	c.Add("c", 2)
@@ -177,6 +222,7 @@ func TestMix(t *testing.T) {
 	c.Histogram("h", 10)
 	c.Set("s", "a")
 	c.Set("s", "b")
+	c.Snapshot("ss", []string{"b", "c"})
 
 	// expect: choosable a metrics in mixed metrics collector
 	expectGauge := []byte("5.0")
@@ -197,6 +243,16 @@ func TestMix(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, expectSet) {
 		t.Errorf("want %s, got %s", expectSet, got)
+	}
+
+	expectSnapshot := []byte(`["b","c"]`)
+	agg = c.metrics["ss"].Aggregate()
+	got, err = agg["ss"].MarshalJSON()
+	if err != nil {
+		t.Fatalf("want no error, got %v", err)
+	}
+	if !reflect.DeepEqual(got, expectSnapshot) {
+		t.Errorf("want %s, got %s", expectSnapshot, got)
 	}
 
 	// expect: can't overwrite at exist keys

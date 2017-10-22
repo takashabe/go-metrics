@@ -1,5 +1,7 @@
 # go-metrics
 
+[![CircleCI](https://circleci.com/gh/takashabe/go-metrics.svg?style=shield)](https://circleci.com/gh/takashabe/go-metrics)
+
 Collecting metrics. The metrics values can be categorized into several types.
 
 ## Installation

@@ -1,6 +1,8 @@
 # go-metrics
 
+[![GoDoc](https://godoc.org/github.com/takashabe/go-metrics?status.svg)](https://godoc.org/github.com/takashabe/go-metrics)
 [![CircleCI](https://circleci.com/gh/takashabe/go-metrics.svg?style=shield)](https://circleci.com/gh/takashabe/go-metrics)
+[![Go Report Card](https://goreportcard.com/badge/github.com/takashabe/go-metrics)](https://goreportcard.com/report/github.com/takashabe/go-metrics)
 
 Collecting metrics. The metrics values can be categorized into several types.
 
